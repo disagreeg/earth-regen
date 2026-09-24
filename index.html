@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Earth ReGen</title>
+<!-- Fonts are self-hosted (assets/fonts/) so the game needs no network — works
+     off file://, over http, and in the packaged .exe alike. -->
+<link rel="stylesheet" href="fonts.css?v=914">
+<!-- ?v= is a cache-buster: bump it whenever a file changes, so the browser
+     never serves a stale mix of old and new scripts when opened from disk. -->
+<link rel="stylesheet" href="css/style.css?v=914">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="cur-block ci">
+    <div class="cur-ic"></div>
+    <div>
+      <div class="cur-label">CLEAN INDEX</div>
+      <div class="cur-amount"><span id="ci-value">0</span></div>
+    </div>
+    <div class="cur-rate" id="ci-rate" title="What your machines produce, as they produce it">0 CI/h</div>
+  </div>
+
+  <div class="cur-block money">
+    <div class="cur-ic"></div>
+    <div>
+      <div class="cur-label">MONEY</div>
+      <div class="cur-amount">$<span id="money-value">0</span></div>
+    </div>
+    <div class="cur-rate" id="money-rate" title="What your machines produce, as they produce it">0 $/h</div>
+  </div>
+
+  <div class="cur-block gem">
+    <div class="cur-ic"></div>
+    <div>
+      <div class="cur-label">DIAMONDS</div>
+      <div class="cur-amount"><span id="gem-value">0</span></div>
+    </div>
+  </div>
+
+  <!-- ###  STEP 95 — THE ONE THING THAT PUSHES THE RIGHT-HAND GROUP RIGHT.  ###
+       Reported as "the goals button after 2nd step going to center", and it was exactly
+       that: `.goals-btn` and `#topbar .actions` BOTH carried `margin-left: auto`, and two
+       auto margins in one flex row SPLIT the free space between them rather than one
+       winning. Measured on a 1280 bar with only CLEAN INDEX revealed, Goals sat at
+       542-672 — dead centre. It was invisible before step 93 only because the currency
+       blocks filled the row and there was no free space to split.
+       This spacer is now the ONLY thing that takes the slack, so everything after it —
+       Goals, Attention, the icon buttons — travels as one group whichever of them is on
+       screen. Its negative margin cancels the extra `gap` the browser puts before it, so
+       a bar with no room to spare lays out exactly as it did before it existed. -->
+  <div class="tb-spacer" aria-hidden="true"></div>
+
+  <button id="btn-goals" class="btn goals-btn" title="Objectives">
+    <span class="gb-ic"></span><span>Goals</span>
+    <span class="tl-badge hidden" id="goal-badge">0</span>
+  </button>
+
+  <!-- machines that have stopped, anywhere. Hidden while there are none; pressing it
+       cycles through them, flying to the place and opening the card. config.diagnose -->
+  <button id="btn-stuck" class="btn stuck-btn hidden" title="Machines that need you">
+    <span id="stuck-label">Attention</span>
+    <span class="tl-badge" id="stuck-count">0</span>
+  </button>
+
+  <div class="actions">
+    <button id="btn-sound" class="btn icon-btn" title="Sound on/off"></button>
+    <button id="btn-codex" class="btn icon-btn" title="Codex — everything in the game"></button>
+    <button id="btn-save" class="btn">Save</button>
+    <button id="btn-menu" class="btn">Menu</button>
+  </div>
+</header>
+
+<!-- appears only when not one machine is on screen. config.camera -->
+<button id="btn-home" class="hidden"></button>
+
+<!-- testing aid: scales the simulation clock. Hide it with config.dev.enabled -->
+<div id="devbar"></div>
+
+<main id="stage">
+  <canvas id="board"></canvas>
+  <div id="sparks"></div>
+
+  <!-- fly between places; only shown once there is more than one -->
+  <div id="places" class="hidden"></div>
+
+  <!-- the diamond event lives here; only the gem itself takes clicks -->
+  <div id="gem-layer"></div>
+
+  <!-- the top-left rail: boost/weather pills, and under them the Plan's line.
+       They share one column so the two can never sit on top of each other (step 76). -->
+  <div id="left-rail">
+    <div id="boost-bar"></div>
+  </div>
+
+  <!-- floating inspector, only visible with a machine selected -->
+  <aside id="inspector" class="hidden"></aside>
+
+  <!-- build menu, docked to the bottom of the map -->
+  <div id="dock" class="open">
+    <button id="dock-toggle" class="dock-toggle">
+      <span class="dt-chev"></span><span class="dt-label">BUILD</span>
+    </button>
+    <div id="dock-body">
+      <div id="palette"></div>
+    </div>
+  </div>
+
+  <!-- floating skill-tree launchers, bottom-right -->
+  <div id="tree-launch">
+    <button class="tl-btn ci" data-tree="ci" title="Clean Index skills">
+      <span class="tl-ic"></span><span class="tl-label">Machine Tree</span>
+      <!-- how many skills the score can already pay for; hidden at zero -->
+      <span class="tl-badge hidden" id="ci-badge">0</span>
+    </button>
+    <button class="tl-btn money" data-tree="money" title="Money skills">
+      <span class="tl-ic"></span><span class="tl-label">Money Skills</span>
+    </button>
+  </div>
+
+  <!-- boosts sit bottom-left, well clear of the skill-tree launchers -->
+  <div id="boost-launch">
+    <button class="tl-btn gem" data-panel="boosts" title="Spend diamonds on temporary boosts">
+      <span class="tl-ic"></span><span class="tl-label">Boosts</span>
+    </button>
+    <!-- only appears once a blueprint has been saved -->
+    <button id="bp-launch" class="tl-btn bp hidden" data-panel="blueprints"
+            title="Saved groups of machines, ready to stamp down">
+      <span class="tl-ic"></span><span class="tl-label">Blueprints</span>
+      <span class="tl-badge">0</span>
+    </button>
+  </div>
+
+</main>
+
+<div id="toasts"></div>
+
+<!-- one modal serves both the Boosts and the Goals board -->
+<div id="panel" class="hidden">
+  <div class="pn-card">
+    <div class="pn-head">
+      <span class="pn-ic"></span>
+      <h2 id="pn-title">BOOSTS</h2>
+      <span class="pn-bank" id="pn-bank">0 &#9670;</span>
+      <button id="pn-close" class="btn">Close <kbd>Esc</kbd></button>
+    </div>
+    <div id="pn-body"></div>
+    <p id="pn-note" class="pn-note"></p>
+  </div>
+</div>
+
+<div id="skilltree" class="hidden">
+  <div class="tree-head">
+    <h2>SKILL TREE</h2>
+    <div class="tree-tabs">
+      <button class="tree-tab active" data-tree="ci">Clean Index</button>
+      <button class="tree-tab" data-tree="money">Money</button>
+      <button class="tree-tab" data-tree="summary" id="tree-tab-sum">Your Tree</button>
+    </div>
+    <div class="tree-bank">
+      <span id="tree-ci">0 CI</span>
+      <span id="tree-money">$0</span>
+    </div>
+    <div id="tree-zoom">
+      <button class="tz-btn" data-z="0.8" title="Zoom out">&minus;</button>
+      <span id="tree-zoom-pct">100%</span>
+      <button class="tz-btn" data-z="1.25" title="Zoom in">+</button>
+      <button class="tz-btn wide" data-z="reset" title="Back to 100%">Fit</button>
+    </div>
+    <button id="tree-close" class="btn">Close <kbd>Esc</kbd></button>
+  </div>
+  <div class="tree-scroll">
+    <div id="tree-inner">
+      <svg id="tree-links" width="1560" height="1000"></svg>
+    </div>
+    <p id="tree-note" class="tree-note"></p>
+  </div>
+</div>
+
+<!-- The title screen. Sits over everything; the game loop runs underneath but no
+     save slot is open until PLAY is pressed. -->
+<div id="menu">
+  <canvas id="menu-bg"></canvas>
+  <div class="mn-vig"></div>
+  <div class="mn-body"></div>
+</div>
+
+<script src="js/util.js?v=914"></script>
+<script src="js/icons.js?v=914"></script>
+<script src="js/audio.js?v=914"></script>
+<script src="js/config.js?v=914"></script>
+<!-- i18n edits config in place, so it must load after it and before anything
+     that reads a word out of it -->
+<script src="js/i18n.js?v=914"></script>
+<script src="js/state.js?v=914"></script>
+<script src="js/sim.js?v=914"></script>
+<script src="js/pace.js?v=914"></script>
+<script src="js/render.js?v=914"></script>
+<script src="js/input.js?v=914"></script>
+<script src="js/ui.js?v=914"></script>
+<script src="js/practice.js?v=914"></script>
+<!-- DEV ONLY: the machine data sheet. It reads state/sim/icons and is opened from
+     the dev strip, so it loads after ui.js. config.dev.info removes it. -->
+<script src="js/tutor.js?v=914"></script>
+<!-- STEP 80c: js/brand.js is NOT loaded. It holds the studio mark, and the splash
+     that drew it is off (config.splash.enabled) so nothing reads it — and shipping it
+     would put an image-model's output at a public URL inside the build, which is the
+     whole thing turning the splash off was meant to avoid. The file is still in the
+     repo and tools/make-build.ps1 keeps it OUT of the zip; put this tag back, and take
+     jsrand.js off that exclusion list, if the splash is ever switched back on. -->
+<script src="js/menu.js?v=914"></script>
+<!-- STEP 331: the console helpers. A LEAF nothing in the game calls, in its own file
+     so the WEB build can drop it (tools/make-build.ps1) while the exe keeps it.
+     Loads after every module and before main.js: it defines one object literal and
+     runs nothing, so it only needs GG.state and friends to exist. -->
+<script src="js/main.js?v=914"></script>
+</body>
+</html>
+
