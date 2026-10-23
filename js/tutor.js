@@ -1,21 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 (function (GG) {
   'use strict';
   const C = GG.config, S = GG.state, Sim = GG.sim, U = GG.util, IC = GG.icons;
@@ -24,17 +6,14 @@
   GG.tutor = T;
 
   let el = {};
-  let hintQueue = [];      
-  
-
+  let hintQueue = [];
 
   let hintQueued = Object.create(null);
   let activeHint = null;
-  
 
   let softHint = null, softUntil = 0, softDom = null;
-  let camStart = null;     
-  let firedAction = {};    
+  let camStart = null;
+  let firedAction = {};
 
   T.init = function () {
     const wrap = document.createElement('div');
@@ -46,8 +25,6 @@
         '<div class="tc-head"><span class="tc-ic"></span><b class="tc-title"></b>' +
           '<span class="tc-step"></span></div>' +
         '<div class="tc-text"></div>' +
-        
-
 
         '<button class="tut-try hidden" type="button"></button>' +
         '<div class="tc-choices hidden"></div>' +
@@ -79,9 +56,6 @@
       try: wrap.querySelector('.tut-try'),
     };
 
-    
-
-
     el.try.onclick = function () {
       const id = el.try.dataset.try;
       if (!id) return;
@@ -91,24 +65,20 @@
 
     el.next.onclick = function () {
       GG.audio.play('click');
-      
+
       if (activeHint) { dismissHint('never'); return; }
       advance();
     };
     el.skip.onclick = function () {
       GG.audio.play('click');
-      
+
       if (activeHint) { dismissHint('later'); return; }
-      
-
-
 
       T.finish();
     };
     camStart = null;
   };
 
-  
   function steps() { return C.tutorial.steps; }
   function idx() { return S.g.tutorStep || 0; }
   function current() { return steps()[idx()] || null; }
@@ -119,33 +89,24 @@
   function atLast() { return idx() >= steps().length - 1; }
 
   T.running = running;
-  
 
   T.finish = function (quiet) {
     S.g.tutorDone = true;
-    
-
-
-
 
     S.g.tutorSkipped = !!quiet;
     hide();
-    
+
     if (!quiet) GG.ui.toast(GG.config.ui.tutorReplay
       ? 'Tutorial closed. Replay it from the Codex' : 'Tutorial closed');
   };
   T.restart = function () {
     S.g.tutorDone = false;
-    S.g.tutorSkipped = false;      
+    S.g.tutorSkipped = false;
     S.g.tutorStep = 0;
     S.g.hintsSeen = {};
     S.g.tutorChoice = null;
     T.sync();
   };
-
-  
-
-
 
   T.sync = function () {
     hintQueue = []; hintQueued = Object.create(null); activeHint = null; firedAction = {}; camStart = null;
@@ -154,21 +115,13 @@
     hide();
   };
 
-  
-
   T.hintState = function () {
     return { queued: hintQueued, queue: hintQueue.map(h => h.node || h.id),
              showing: activeHint ? (activeHint.node || activeHint.id) : null,
              soft: softHint ? (softHint.node || softHint.id) : null };
   };
 
-  
-
-
   T.holdGem = function () {
-    
-
-
 
     if (GG.practice && GG.practice.active) return true;
     if (!running()) return false;
@@ -180,23 +133,19 @@
     if (atLast()) { T.finish(); return; }
     S.g.tutorStep = idx() + 1;
     camStart = null;
-    lastText = null;             
+    lastText = null;
     GG.audio.play('skill');
   }
 
-  
-
-
-
   const DONE = {
-    
+
     camera: function () {
       const c = S.g.camera;
       if (!camStart) { camStart = { x: c.x, y: c.y, s: c.scale }; return false; }
       return Math.hypot(c.x - camStart.x, c.y - camStart.y) > 40 ||
              Math.abs(c.scale - camStart.s) > 0.05;
     },
-    
+
     ci: function (d) { return U.canAfford(S.g.ci, ciGoal(d)); },
     skill: function (d) { return S.hasSkill(d.skill); },
     skillLevel: function (d) { return S.skillLevel(d.skill) > 0; },
@@ -210,12 +159,9 @@
     },
     counter: function (d) { return (S.g[d.key] || 0) >= (d.goal || 1e-9); },
     claimed: function () { return Object.keys(S.g.objectives || {}).length > 0; },
-    
 
     panel: function (d) { return GG.ui.panelKind && GG.ui.panelKind() === d.panel; },
     boosted: function () { return Object.keys(S.g.boostUses || {}).length > 0; },
-    
-
 
     cut: function () { return (S.g.wiresCut || 0) > 0; },
   };
@@ -229,22 +175,16 @@
   }
 
   function stepDone(st) {
-    if (!st.done) return false;               
+    if (!st.done) return false;
     const fn = DONE[st.done.kind];
     return fn ? fn(st.done) : false;
   }
-
-  
-
-
 
   function waiting(st) {
     if (!st.waitFor) return false;
     const d = st.waitFor;
     return !U.canAfford(d.kind === 'money' ? S.g.money : S.g.ci, ciGoal(d));
   }
-
-  
 
   function progressOf(st) {
     if (st.waitFor && !waiting(st)) return null;
@@ -259,11 +199,6 @@
                : U.fmt(cur, 2) + ' / ' + U.fmt(goal) + unit };
   }
 
-  
-
-
-
-
   function resolve(anchor) {
     for (const a of (anchor || [])) {
       const r = one(a);
@@ -271,13 +206,6 @@
     }
     return null;
   }
-
-  
-
-
-
-
-
 
   function touchAnchor(o) {
     if (!o || !o.anchorTouch) return null;
@@ -289,16 +217,12 @@
     if (a.chosenBoost) return chosenBoostEl();
     if (a.el) {
       const node = document.querySelector(a.el);
-      if (!node || !node.offsetParent) return null;      
+      if (!node || !node.offsetParent) return null;
       return { rect: node.getBoundingClientRect(), dom: node };
     }
     const st = GG.render && document.getElementById('stage');
     if (!st) return null;
     const sr = st.getBoundingClientRect();
-    
-
-
-
 
     const z = (GG.render.uiZoom ? GG.render.uiZoom() : 1);
     function box(wx, wy, w, h) {
@@ -309,8 +233,6 @@
                        width: w * c, height: h * c,
                        right: px + w * c / 2, bottom: py + h * c / 2 } };
     }
-    
-
 
     if (a.site) {
       const s = typeof a.site === 'string'
@@ -318,7 +240,7 @@
                                   (x.reserve === undefined || x.reserve > 0))
         : S.sitesHere()[0];
       if (!s) return null;
-      const b = S.siteBox(s);      
+      const b = S.siteBox(s);
       return box(s.x, s.y, b.w, b.h);
     }
     if (a.node) {
@@ -343,25 +265,11 @@
     return null;
   }
 
-  
-
   function chosenBoostEl() {
     if (!S.g.tutorChoice) return null;
     const n = document.querySelector('#pn-body .pn-row[data-id="' + S.g.tutorChoice + '"] .pn-buy');
     return (n && n.offsetParent) ? { rect: n.getBoundingClientRect(), dom: n } : null;
   }
-
-  
-
-
-
-
-
-
-
-
-
-
 
   const NO_WIRES = new Set();
   let hotSig = null, hotSet = NO_WIRES;
@@ -374,18 +282,11 @@
     return true;
   }
 
-  
-
-
-
-
-
   T.hotWires = function () {
     const fx = C.tutorial.wireFx;
     if (!fx || fx.enabled === false) return NO_WIRES;
     const live = activeHint || (running() ? current() : null);
     const specs = live && live.wires;
-    
 
     const ta = !!touchAnchor(live);
     const off = !specs || ta || (!activeHint && waiting(live));
@@ -401,12 +302,6 @@
     hotSet = out;
     return hotSet;
   };
-
-  
-
-
-
-
 
   function wireBox() {
     const ids = T.hotWires();
@@ -435,11 +330,6 @@
              height: (y1 - y0) + g * 2, right: x1 + g, bottom: y1 + g };
   }
 
-  
-
-
-
-
   function ringSpace(r) {
     const z = (GG.render.uiZoom ? GG.render.uiZoom() : 1);
     if (!r || z === 1) return r;
@@ -448,30 +338,10 @@
              bottom: (r.bottom !== undefined ? r.bottom : r.top + r.height) / z };
   }
 
-  
   function hide() {
     el.card.classList.add('hidden');
     el.ring.classList.add('hidden');
   }
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   function place(rect, quiet, side, avoid) {
     if (quiet) { el.card.style.left = ''; el.card.style.top = ''; return; }
@@ -479,11 +349,6 @@
     const cw = el.card.offsetWidth || 340, ch = el.card.offsetHeight || 160;
     const M = 14, W = window.innerWidth / z, H = window.innerHeight / z;
     let x, y;
-    
-
-
-
-
 
     if (avoid) {
       const cy = rect ? rect.top + rect.height / 2 - ch / 2 : avoid.top;
@@ -508,7 +373,7 @@
     if (!rect) {
       x = (W - cw) / 2; y = (H - ch) / 2;
     } else if (side) {
-      
+
       const right = rect.right + M;
       x = (right + cw < W - M) ? right : rect.left - cw - M;
       y = rect.top + rect.height / 2 - ch / 2;
@@ -521,40 +386,55 @@
     el.card.style.top = U.clamp(y, M, Math.max(M, H - ch - M)) + 'px';
   }
 
-  
-
   let lastText = null, choiceSig = null;
+
+  function rowsOn() { const r = (C.tutorial || {}).noteRows; return !!(r && r.enabled); }
+  function noteRows(kind) {
+    if (kind !== 'weather') return '';
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const full = Sim.demoOn && !Sim.demoOn();
+    const now = Sim.weather && Sim.weather();
+    const list = s => (s ? String(s).split('\n') : []);
+    return '<div class="tc-wx">' + ((C.weather || {}).events || []).filter(e => e.noteUp || e.noteDown).map(function (e) {
+      const up = list(full && e.noteUpPaid ? e.noteUpPaid : e.noteUp);
+      const dn = list(full && e.noteDownPaid ? e.noteDownPaid : e.noteDown);
+      const lit = now && now.id === e.id;
+      return '<div class="tc-wx-row' + (lit ? ' now' : '') + '" style="--wc:' + e.color + '">' +
+        '<span class="tc-wx-ic">' + IC.svg(e.icon, 18, e.color) + '</span><div>' +
+        '<div class="tc-wx-name">' + esc(e.name) +
+          (lit ? '<span class="tc-wx-now">' + esc(GG.i18n.t('tut.wxNow')) + '</span>' : '') + '</div>' +
+        '<div class="tc-wx-fx">' + up.map(x => '<span class="up">▲ ' + esc(x) + '</span>').join('') +
+          dn.map(x => '<span class="dn">▼ ' + esc(x) + '</span>').join('') + '</div>' +
+        (e.noteMore ? '<div class="tc-wx-more">' + esc(e.noteMore) + '</div>' : '') +
+        '</div></div>';
+    }).join('') + '</div>';
+  }
 
   function html(s) {
     return s.split('\n\n')
       .map(p => '<p>' + p.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</p>').join('');
   }
 
-  
-
   function bodyText(o) {
-    
 
+    if (o.textDrag && GG.input && GG.input.dragSweep && GG.input.dragSweep()) {
 
-
-    if (o.textDrag && GG.input && GG.input.dragSweep && GG.input.dragSweep()) return o.textDrag;
-    
-
-
+      if (o.textDragMouse && !GG.util.noMouse()) return o.textDragMouse;
+      return o.textDrag;
+    }
 
     if (o.textTouch && GG.input && GG.input.touchUi && GG.input.touchUi()) return o.textTouch;
-    
-
-
 
     if (o.textNoMachine && Sim.trialMachines && !Sim.trialMachines()) return o.textNoMachine;
+
+    if (o.rows && o.textRows && rowsOn()) return o.textRows;
+
+    if (o.textFull && Sim.demoOn && !Sim.demoOn()) return o.textFull;
     const pick = o.boost || (o.choices ? S.g.tutorChoice : null);
     if (!pick) return o.text;
     const b = Sim.boostById(pick);
     return (o.textChosen || o.text).replace('%s', b ? b.name : 'it');
   }
-
-  
 
   function buildChoices(o) {
     const sig = o.choices ? o.id + '|' + (S.g.tutorChoice || '') : '';
@@ -586,45 +466,26 @@
     el.card.classList.toggle('quiet', !!quiet);
     el.ic.innerHTML = IC.svg(activeHint ? 'help' : 'goals', 17);
     el.title.textContent = (quiet && o.quietTitle) ? o.quietTitle : o.title;
-    
-
-
 
     el.step.textContent = activeHint
       ? GG.i18n.t(activeHint.whyNode ? 'cx.whyBuild' : 'tut.tip')
       : (n + ' / ' + total);
 
-    
-
-
-
-
-
-
-
-
     const txt = activeHint ? bodyText(o)
       : ((quiet && o.quietText) ? o.quietText : bodyText(o));
-    if (txt !== lastText) { el.text.innerHTML = html(txt); lastText = txt; }
+    const rows = (o.rows && o.textRows && rowsOn()) ? noteRows(o.rows) : '';
+    if (txt + rows !== lastText) { el.text.innerHTML = html(txt) + rows; lastText = txt + rows; }
 
-    
-
-
-
-
-
-
-
-
-
-    const tryId = activeHint ? (activeHint.tryNode || activeHint.whyNode || activeHint.node) : null;   
+    const tryId = activeHint ? (activeHint.tryNode || activeHint.whyNode || activeHint.node) : null;
     const canTry = !!(tryId && GG.practice && GG.practice.canPractise &&
                       GG.practice.canPractise(tryId));
     el.try.classList.toggle('hidden', !canTry);
     if (canTry) {
       el.try.dataset.try = tryId;
-      el.try.innerHTML = GG.practice.tryFace(tryId);   
-    } else delete el.try.dataset.try;
+
+      const face = GG.practice.tryFace(tryId);
+      if (el.try.dataset.face !== face) { el.try.innerHTML = face; el.try.dataset.face = face; }
+    } else { delete el.try.dataset.try; delete el.try.dataset.face; }
 
     buildChoices(activeHint ? {} : o);
 
@@ -634,23 +495,14 @@
       el.barTxt.textContent = prog.txt;
     } else el.bar.classList.add('hidden');
 
-    
-    
-
     const sn = !!(activeHint && activeHint.snooze);
     el.next.textContent = GG.i18n.t(sn ? 'tut.iKnow' : 'tut.gotIt');
     el.next.classList.toggle('hidden', !activeHint && !!o.done);
     el.skip.textContent = GG.i18n.t(sn ? 'tut.remindLater' : (activeHint ? 'tut.gotIt' : 'tut.skip'));
     el.skip.classList.toggle('hidden', !!activeHint && !sn);
 
-    
-
-
-
     if (rect && !quiet && !noRing) {
       el.ring.classList.remove('hidden');
-      
-
 
       el.ring.classList.toggle('nodim', !!(activeHint && activeHint.nodim));
       el.ring.style.left = rect.left + 'px';
@@ -661,8 +513,6 @@
 
     place(rect, quiet, side, avoid);
   }
-
-  
 
   function wireClear(rect, to) {
     const st = document.getElementById('stage');
@@ -684,41 +534,6 @@
                        right: x1 + g, bottom: y1 + g });
   }
 
-  
-
-
-
-  
-
-
-  
-
-
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   let whyList = null;
   function whyHints() {
     if (C.tutorial.whyCards === false) return [];
@@ -732,27 +547,28 @@
     return whyList;
   }
 
+  T.tipsOn = function () {
+    const u = (C.ui || {}).tips;
+    if (!u || u.enabled === false) return true;
+    return ((GG.menu && GG.menu.tips) || u.def || 'on') !== 'off';
+  };
+  function tipAllowed(h) {
+    if (h.node || T.tipsOn()) return true;
+    const keep = ((C.ui || {}).tips || {}).keep || [];
+    return keep.indexOf(h.id) >= 0;
+  }
+
   const whenBad = Object.create(null);
   function hintReady(h) {
-    
-
 
     if (h.whyNode) {
       const wt = C.nodeTypes[h.whyNode];
       if (wt && wt.whyNeeds && GG.sim && GG.sim.demoNode && GG.sim.demoNode(wt.whyNeeds)) return false;
       return S.isUnlocked(h.whyNode);
     }
-    
 
     const until = S.g.hintSnooze && S.g.hintSnooze[h.node || h.id];
     if (until && (S.g.playtime || 0) < until) return false;
-    
-
-
-
-
-
-
 
     if (h.node) {
       const mn = C.tutorial.machineNotes;
@@ -763,9 +579,6 @@
     if (h.when) {
       try { return !!h.when(S.g, GG.sim, S); }
       catch (e) {
-        
-
-
 
         if (!whenBad[h.id]) { whenBad[h.id] = 1; console.warn('[ReGen] hint "' + h.id + '" when() threw', e); }
         return false;
@@ -773,12 +586,6 @@
     }
     return false;
   }
-
-  
-
-
-
-
 
   let lastScan = 0, lastWhen = 0;
   T.checkUnlocks = function () {
@@ -789,41 +596,28 @@
     const gap = (C.tutorial.hintGapSec === undefined ? 45 : C.tutorial.hintGapSec) * 1000;
     let doWhen = now - lastScan >= every;
     if (doWhen) lastScan = now;
-    
-
-
 
     if (doWhen && lastWhen && now - lastWhen < gap) doWhen = false;
-    
-
-
-
-
 
     if (running()) doWhen = false;
-    
+
     C.tutorial.hintList.concat(whyHints()).forEach(function (h) {
       const key = h.node || h.id;
-      
-
-
-
-
 
       if (h.off) return;
       if (h.needsTutor && S.g.tutorSkipped) return;
-      
-
-
+      if (!tipAllowed(h)) return;
 
       if (h.node) {
         const keep = C.tutorial.machineNotes && C.tutorial.machineNotes.keep;
         if (keep && keep.indexOf(h.node) < 0) return;
       }
       if (!key || S.g.hintsSeen[key] || hintQueued[key]) return;
-      if (h.when && !doWhen) return;
+
+      if (h.when && !doWhen && !(h.now && now - lastScan < 50)) return;
       if (!hintReady(h)) return;
-      hintQueued[key] = true;                
+      hintQueued[key] = true;
+      if (h.now) { hintQueue.unshift(h); return; }
       if (h.when) { lastWhen = now; doWhen = false; }
       hintQueue.push(h);
     });
@@ -831,18 +625,10 @@
 
   function dismissHint(mode) {
     const h = activeHint;
-    
-
-
-
-
 
     if (h && h.snooze && mode === 'later') {
       const key = h.node || h.id;
       if (S.g.hintsSeen) delete S.g.hintsSeen[key];
-      
-
-
 
       delete hintQueued[key];
       S.g.hintSnooze = S.g.hintSnooze || {};
@@ -853,42 +639,18 @@
     hide();
   }
 
-  
-
-
-
-
   function fireHintAction(h) {
     if (!h || !h.action) return;
     if (h.action === 'rain') {
       const loc = h.loc || S.g.loc;
-      
+
       if (!Sim.wxState(loc).id) Sim.startWeather('rain', loc);
     }
   }
 
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-
-
   function showSoft(h) {
     const secs = C.tutorial.hintSoftSec === undefined ? 5 : C.tutorial.hintSoftSec;
-    if (!(secs > 0)) return false;         
+    if (!(secs > 0)) return false;
     softHint = h;
     el.soft.classList.remove('hidden');
     softUntil = Date.now() + secs * 1000;
@@ -896,15 +658,8 @@
     return true;
   }
 
-  
-
   let softText = null;
   function placeSoft() {
-    
-
-
-
-
 
     if (softHint && softHint.text !== softText) {
       softText = softHint.text;
@@ -919,8 +674,7 @@
       if (softDom) softDom.classList.add('hint-glow');
     }
     const rect = found ? ringSpace(found.rect) : null;
-    
-    
+
     const z = (GG.render.uiZoom ? GG.render.uiZoom() : 1);
     const w = el.soft.offsetWidth || 300, h = el.soft.offsetHeight || 80;
     const M = 14, W = window.innerWidth / z, H = window.innerHeight / z;
@@ -928,8 +682,6 @@
     if (!rect) { x = (W - w) / 2; y = M; }
     else {
       x = rect.left + rect.width / 2 - w / 2;
-      
-
 
       const above = rect.top - h - M;
       y = above > M ? above : rect.bottom + M;
@@ -944,45 +696,40 @@
     if (softDom) { softDom.classList.remove('hint-glow'); softDom = null; }
   }
 
-  
   T.tick = function () {
     if (!el.card) return;
-    
-
-
-
-
-
-
 
     if (GG.practice && GG.practice.active) { hide(); return; }
     T.checkUnlocks();
-
-    
 
     if (softUntil) {
       if (Date.now() >= softUntil) endSoft();
       else placeSoft();
     }
 
-    
     if (!activeHint && !softHint && hintQueue.length && !running()) {
       const next = hintQueue.shift();
-      
 
+      let stale = false;
+      try { stale = !!(next.gone && next.gone(S.g)); } catch (e) { stale = false; }
 
-
+      if (!tipAllowed(next)) delete hintQueued[next.node || next.id];
+      else if (stale) S.g.hintsSeen[next.node || next.id] = true;
+      else {
 
       S.g.hintsSeen[next.node || next.id] = true;
       if (next.sound) GG.audio.play(next.sound);
       fireHintAction(next);
       if (!next.soft || !showSoft(next)) activeHint = next;
+      }
+    }
+
+    if (activeHint && activeHint.gone) {
+      let over = false;
+      try { over = !!activeHint.gone(S.g); } catch (e) { over = false; }
+      if (over) dismissHint();
     }
     if (activeHint) {
-      
-
-
-
 
       const ha = T.stepAnchor(activeHint);
       const hr = ha ? resolve(ha) : null;
@@ -992,28 +739,20 @@
       return;
     }
 
-    
-
-
-
     let guard = steps().length + 1;
     while (running() && guard-- > 0) {
       const st = current();
       if (!st) break;
 
-      
       const quiet = waiting(st);
 
-      
       if (!quiet && st.where === 'map') {
         const tree = document.getElementById('skilltree');
         if (tree && !tree.classList.contains('hidden')) GG.ui.toggleSkillTree();
       }
-      
-      
+
       if (st.boost && S.g.tutorChoice !== st.boost) S.g.tutorChoice = st.boost;
 
-      
       if (st.action && !firedAction[st.id]) {
         firedAction[st.id] = true;
         if (st.action === 'spawnGem' && !S.g.gem) {
@@ -1026,14 +765,11 @@
       if (stepDone(st)) { advance(); continue; }
 
       const found = quiet ? null : resolve(T.stepAnchor(st));
-      
 
       const side = !!(found && found.dom && found.dom.closest && found.dom.closest('.skill'));
-      
-
 
       const wb = (!found && !quiet && st.wires) ? wireBox() : null;
-      
+
       const clear = (found && !quiet && C.tutorial.cardClearsWire !== false &&
                      st.done && st.done.kind === 'link' && st.done.to)
         ? wireClear(found.rect, st.done.to) : null;

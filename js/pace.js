@@ -1,37 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 (function (GG) {
   'use strict';
 
@@ -40,10 +6,6 @@
 
   const cfg = function () { return C.pacing || {}; };
   P.on = function () { return !!(C.pacing && C.pacing.enabled); };
-
-  
-
-
 
   function log() {
     const g = S.g;
@@ -54,15 +16,6 @@
     return g.paceLog;
   }
   P.log = log;
-
-  
-
-
-
-  
-
-
-
 
   function lvOf(id) { const v = Number(S.skillLevel(id)); return v > 0 ? Math.floor(v) : 0; }
   P.lvOf = lvOf;
@@ -75,12 +28,7 @@
     return U.canAfford(have, Sim.nextCost(sk));
   };
 
-  
   let acc = 0;
-
-  
-
-
 
   function stampAffordable() {
     const L = log(), t = S.g.playtime;
@@ -93,8 +41,6 @@
     }
   }
 
-  
-
   function sample() {
     const L = log(), g = S.g;
     L.samples.push({
@@ -106,9 +52,6 @@
       lv: C.skills.reduce((a, s) => a + lvOf(s.id), 0),
       nodes: (g.nodes || []).length,
     });
-    
-
-
 
     const max = cfg().maxSamples || 4000;
     if (L.samples.length > max) {
@@ -116,10 +59,6 @@
       L.every = (L.every || cfg().sampleSec || 30) * 2;
     }
   }
-
-  
-
-
 
   let affAcc = 0;
   P.tick = function (dt) {
@@ -130,11 +69,6 @@
     acc = 0;
     sample();
   };
-
-  
-
-
-
 
   P.forward = function (hours, opts) {
     opts = opts || {};
@@ -154,7 +88,7 @@
     let bought = 0, out = null;
 
     try {
-      Sim.events = [];                     
+      Sim.events = [];
       for (let i = 0; i < steps; i++) {
         Sim.tick(step);
         if (autoBuy) bought += buyEverythingAffordable();
@@ -173,17 +107,13 @@
         msTaken: +(performance.now() - wall).toFixed(0),
       };
     } finally {
-      S.g = JSON.parse(snapshot);          
+      S.g = JSON.parse(snapshot);
       Sim.events = queued;
       Sim.invalidate();
       acc = 0;
     }
     return out;
   };
-
-  
-
-
 
   function buyEverythingAffordable() {
     let total = 0;
@@ -193,8 +123,8 @@
       if (!ready.length) return total;
       let did = 0;
       for (const sk of ready) {
-        if (!P.affordable(sk)) continue;   
-        const res = Sim.buySkill(sk.id);   
+        if (!P.affordable(sk)) continue;
+        const res = Sim.buySkill(sk.id);
         if (!res.ok) continue;
         did++; total++;
       }
@@ -211,7 +141,6 @@
     if (row[lv] === undefined || row[lv] === null) row[lv] = +S.g.playtime.toFixed(2);
   };
 
-  
   const hm = function (sec) {
     if (sec === undefined || sec === null) return '—';
     const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
@@ -221,16 +150,12 @@
   P.hm = hm;
   const nz = function (v) { return (v === null || v === undefined) ? undefined : v; };
 
-  
-
   P.rows = function (src) {
     const L = src || log();
     const rows = [];
     for (const sk of C.skills) {
       const n = Sim.maxLevel(sk);
       for (let lv = 0; lv < n; lv++) {
-        
-
 
         const aff = nz((L.aff[sk.id] || [])[lv]);
         const buy = nz((L.buy[sk.id] || [])[lv]);
@@ -248,8 +173,6 @@
     return rows;
   };
 
-  
-
   P.unreached = function (src) {
     const L = src || log();
     const out = [];
@@ -264,11 +187,6 @@
     }
     return out;
   };
-
-  
-
-
-
 
   P.curve = function (src, bucketMin) {
     const L = src || log();
@@ -292,9 +210,6 @@
     }
     return out;
   };
-
-  
-
 
   P.dump = function (bucketMin, src) {
     const L = src || log();
@@ -333,7 +248,7 @@
   P.report = function (src) {
     const L = src || log();
     const rows = P.rows(L), un = P.unreached(L);
-    
+
     console.log('%c PACING — ' + rows.length + ' skill levels reached, ' +
                 un.length + ' still out of reach', 'font-weight:bold');
     console.table(P.curve(L));
@@ -356,11 +271,6 @@
     acc = 0;
     return 'pacing log cleared';
   };
-
-  
-
-
-
 
   const _tick = Sim.tick;
   Sim.tick = function (dt) { _tick(dt); P.tick(dt); };

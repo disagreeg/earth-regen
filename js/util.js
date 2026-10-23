@@ -1,14 +1,9 @@
-
 window.GG = window.GG || {};
 GG.util = (function () {
   'use strict';
   const SUFFIX = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
 
-  
-
-
-
-  function fmt(v, dec, down) {
+  function fmt(v, dec, down, keep) {
     if (v === Infinity) return '∞';
     if (v === null || v === undefined || isNaN(v)) return '0';
     const neg = v < 0; v = Math.abs(v);
@@ -21,7 +16,7 @@ GG.util = (function () {
     if (v < 1000) {
       const d = dec !== undefined ? dec : (v < 10 && v % 1 !== 0 ? 2 : (v % 1 !== 0 ? 1 : 0));
       out = cut(v, d);
-      if (out.indexOf('.') > -1) out = out.replace(/\.?0+$/, '');
+      if (!keep && out.indexOf('.') > -1) out = out.replace(/\.?0+$/, '');
     } else {
       let i = 0;
       while (v >= 1000 && i < SUFFIX.length - 1) { v /= 1000; i++; }
@@ -36,12 +31,6 @@ GG.util = (function () {
     return (h ? h + 'h ' : '') + (h || m ? m + 'm ' : '') + s + 's';
   }
 
-  
-
-
-
-
-
   function eta(sec) {
     sec = Math.max(0, Math.ceil(sec));
     if (sec < 60) return sec + 's';
@@ -51,14 +40,9 @@ GG.util = (function () {
 
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
 
-  
-
-
   const EPS = 1e-9;
   function canAfford(have, cost) { return have >= cost - EPS; }
   function pay(have, cost) { return Math.max(0, have - cost); }
-
-  
 
   function kg(v) {
     if (v === Infinity) return '∞ kg';
@@ -66,28 +50,22 @@ GG.util = (function () {
     return fmt(v) + ' kg';
   }
 
-  
-
   function small(v) {
     if (v >= 1) return fmt(v);
     return v.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
   }
 
-  
-
-
   function cur(id, v, dec) {
     const c = GG.config.currencies[id];
     return c.prefixed ? c.short + fmt(v, dec) : fmt(v, dec) + ' ' + c.short;
   }
-  
+
   function curRange(id, v, cap, dec) {
     const c = GG.config.currencies[id];
     const pair = fmt(v, dec) + ' / ' + fmt(cap);
     return c.prefixed ? c.short + pair : pair + ' ' + c.short;
   }
 
-  
   function gameTime(hours) {
     const hpd = GG.config.time.hoursPerDay;
     const day = Math.floor(hours / hpd) + 1;
@@ -95,48 +73,19 @@ GG.util = (function () {
     return 'Day ' + day + ' · ' + String(h).padStart(2, '0') + ':00';
   }
 
-  
-
-
-
-
-
-
   let mqNoMouse = null;
   function noMouse() {
     try {
       if (!mqNoMouse) mqNoMouse = matchMedia('(hover: none) and (pointer: coarse)');
       return !!mqNoMouse.matches;
-    } catch (e) { return false; }   
+    } catch (e) { return false; }
   }
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   function calc(src) {
     if (typeof src === 'number') return isFinite(src) ? src : null;
     const raw = String(src === null || src === undefined ? '' : src).trim();
     if (!raw) return null;
-    
+
     if (!/^[-+*/()., 0-9]+$/.test(raw)) return null;
     const t = raw.replace(/,/g, '.');
     let i = 0;
@@ -170,7 +119,7 @@ GG.util = (function () {
         i++;
         const r = factor();
         if (r === null) return null;
-        if (op === '/' && r === 0) return null;   
+        if (op === '/' && r === 0) return null;
         v = op === '*' ? v * r : v / r;
       }
     };
@@ -189,7 +138,7 @@ GG.util = (function () {
     };
     const v = expr();
     ws();
-    if (v === null || i !== t.length || !isFinite(v)) return null;   
+    if (v === null || i !== t.length || !isFinite(v)) return null;
     return v;
   }
 

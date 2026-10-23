@@ -1,22 +1,9 @@
-
-
-
 (function (GG) {
   'use strict';
   const C = GG.config, S = GG.state;
 
   let last = 0, acc = 0, saveAcc = 0, markAcc = 0, clock = 0;
   const STEP = 1 / C.sim.tickRate;
-
-  
-
-
-
-
-
-
-
-
 
   const seen = Object.create(null);
   GG.crashes = [];
@@ -35,29 +22,20 @@
     seen[key] = (seen[key] || 0) + 1;
     const n = seen[key];
 
-    
-
     if (cfg.saveOnError && n === 1) {
       try { if (GG.menu && GG.menu.started()) S.save(false); } catch (e) {}
     }
 
     if (n <= cfg.maxSame) {
       GG.crashes.push({ where: where, message: msg, stack: err && err.stack, at: Date.now() });
-      
+
       console.error('[Earth ReGen] ' + where + ' threw:', err);
       if (n === cfg.maxSame) console.error('[Earth ReGen] ...further "' + msg + '" in ' + where + ' will be counted, not printed');
     }
     if (cfg.banner) showBanner(where, msg, n);
   }
 
-  
-
-
   let bannerEl = null, bannerHidden = null;
-
-  
-
-
 
   function noticeStack() {
     let st = document.getElementById('notice-stack');
@@ -67,10 +45,6 @@
 
   function showBanner(where, msg, n) {
     const key = where + '|' + msg;
-    
-
-
-
 
     if (bannerHidden === key) return;
     try {
@@ -92,22 +66,11 @@
     } catch (e) {  }
   }
 
-  
-
-
   function phase(where, fn) {
     if (!guardCfg().enabled) { fn(); return true; }
     try { fn(); return true; }
     catch (e) { onCrash(where, e); return false; }
   }
-
-  
-
-
-
-
-  
-
 
   let lastFrameAt = performance.now(), stallMuted = false;
   GG.frameWatch = { stalled: function () { return stallMuted; } };
@@ -115,10 +78,6 @@
   function frame(now) {
     lastFrameAt = performance.now();
     if (stallMuted) { stallMuted = false; try { GG.audio.resume(); } catch (e) {} }
-    
-
-
-
 
     if (!guardCfg().enabled) { frameBody(now); requestAnimationFrame(frame); return; }
     try { frameBody(now); }
@@ -133,14 +92,6 @@
     if (dt > C.sim.maxCatchupSec) dt = C.sim.maxCatchupSec;
     clock += dt;
 
-    
-
-
-
-    
-
-
-
     if (GG.menu && GG.menu.isOpen()) { acc = 0; return; }
 
     const speed = (GG.ui && GG.ui.speed) || 1;
@@ -153,45 +104,27 @@
         acc -= STEP;
       }
     });
-    
-    
+
     if (!ok) acc = 0;
 
-    
-
-
     saveAcc += dt;
-    
-    
+
     if (saveAcc >= C.sim.autosaveSec) { saveAcc = 0; phase('the autosave', function () { S.save(false); }); }
 
-    phase('the renderer', function () { GG.render.draw(clock, GG.input.view); });
+    phase('the edge scroll', function () { GG.input.edgeTick(dt); });
+    phase('the key pan', function () { GG.input.keyPanTick(dt); });
+
+    phase('the planet view', function () { if (GG.planetView) GG.planetView.tick(); });
+    if (!(GG.planetView && GG.planetView.covering())) phase('the renderer', function () { GG.render.draw(clock, GG.input.view); });
     phase('the interface', function () { GG.ui.tick(); });
-    
+
     phase('the tutorial', function () { GG.tutor.tick(); });
 
-    
-
+    phase('the guide', function () { if (GG.guide) GG.guide.tick(performance.now()); });
 
     markAcc += dt;
     if (markAcc >= C.sim.autosaveMarkSec) { markAcc = 0; phase('the autosave badge', function () { GG.ui.autosaveMark(); }); }
   }
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   let hiddenAt = 0;
 
@@ -202,58 +135,46 @@
   }
 
   function onHide() {
-    
-    
+
     if (!bgCfg().enabled) { hiddenAt = 0; return; }
-    
+
     if (!(GG.menu && GG.menu.started())) { hiddenAt = 0; return; }
     hiddenAt = Date.now();
-    
-    
+
     if (bgCfg().saveOnHide) phase('the autosave', function () { S.save(false); });
   }
 
   function onShow() {
     const at = hiddenAt;
     hiddenAt = 0;
-    last = 0;                       
+    last = 0;
     if (!bgCfg().enabled) return;
     if (!at || !(GG.menu && GG.menu.started())) return;
     const awaySec = (Date.now() - at) / 1000;
     phase('the catch-up', function () {
-      
-      
+
       const rep = GG.sim.offline(awaySec);
       if (rep && bgCfg().card) GG.ui.offlineCard(rep);
     });
   }
 
   function boot() {
+    if (GG.store && GG.store.init) GG.store.init(bootGame); else bootGame();
+  }
+  function bootGame() {
     S.init();
     GG.sim.invalidate();
     GG.render.init(document.getElementById('board'));
     GG.input.init(document.getElementById('board'));
     GG.ui.init();
     GG.tutor.init();
-    GG.menu.init();           
-    
-
+    GG.menu.init();
 
     if (window.desktop && window.desktop.autoplay && GG.config.audio.desktopAutoplay !== false) {
       try { GG.audio.unlock(); } catch (e) { console.warn('desktop autoplay', e); }
     }
 
-    
-
-
-
-    
-
     document.addEventListener('visibilitychange', function () {
-      
-
-
-
 
       const mute = !C.background || C.background.muteWhenHidden !== false;
       if (document.hidden) {
@@ -282,18 +203,12 @@
       });
     }
 
-    
-    
     window.addEventListener('beforeunload', function () {
       if (GG.menu.started()) S.save(true);
     });
 
-    
-
-
-
     requestAnimationFrame(frame);
-    console.log('%cEarth ReGen — step 2', 'color:#6fdda0;font-weight:bold');
+    console.log('%cEarth ReGen', 'color:#6fdda0;font-weight:bold');
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
